@@ -14,3 +14,11 @@ jobs:
     - uses: actions/setup-dotnet@v4
       with: {dotnet-version: 8.x}
     - run: dotnet build
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: dotnet tool restore
+    - run: dotnet csharpier --check .
+  
