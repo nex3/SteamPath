@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feature.*]
+    tags: ['v*.*.*']
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-dotnet@v4
+      with: {dotnet-version: 8.x}
+    - run: dotnet build
