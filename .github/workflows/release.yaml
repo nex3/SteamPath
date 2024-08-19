@@ -13,6 +13,6 @@ jobs:
     - run: dotnet pack
 
     - name: publish
-      run: dotnet nuget push */bin/Release/*.nupkg -k $NUGET_AUTH_TOKEN
+      run: dotnet nuget push */bin/Release/*.nupkg -k $NUGET_TOKEN
       env:
         NUGET_AUTH_TOKEN: ${{ secrets.NUGET_TOKEN }}
