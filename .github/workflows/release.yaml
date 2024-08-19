@@ -13,6 +13,6 @@ jobs:
     - run: dotnet pack
 
     - name: publish
-      run: "dotnet nuget push bin\Release\*.nupkg --api-key $Env:NUGET_TOKEN"
+      run: "dotnet nuget push bin\\Release\\*.nupkg --api-key $Env:NUGET_TOKEN"
       env:
         NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
