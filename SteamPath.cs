@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Gameloop.Vdf;
 using Gameloop.Vdf.Linq;
+#if WINDOWS7_0_OR_GREATER
 using Microsoft.Win32;
+#endif
 
 namespace SteamPath
 {
@@ -15,6 +17,7 @@ namespace SteamPath
         private static readonly Lazy<List<string>> libraries =
             new(() =>
             {
+#if WINDOWS7_0_OR_GREATER
                 var steam = (string?)
                     Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null);
 
@@ -40,6 +43,14 @@ namespace SteamPath
                             $"Steam is not installed in {linuxStyle} or {macOSStyle}."
                         );
                 }
+#else
+                var home =
+                    Environment.GetEnvironmentVariable("HOME")
+                    ?? throw new SteamPathException("HOME environment variable unavailable.");
+                var steam =
+                    DirIfExists($"{home}/.steam/root")
+                    ?? throw new SteamPathException($"Steam is not installed in {steam}.");
+#endif
 
                 var libraries = new List<string>(new[] { steam });
 
@@ -47,7 +58,7 @@ namespace SteamPath
                 try
                 {
                     vdf = VdfConvert.Deserialize(
-                        File.ReadAllText($@"{steam}\steamapps\libraryfolders.vdf")
+                        File.ReadAllText(Path.Join(steam, "steamapps", "libraryfolders.vdf"))
                     );
                 }
                 catch (IOException e)
@@ -67,8 +78,12 @@ namespace SteamPath
             });
 
         /// <summary>Whether the current process is running under Wine.</summary>
+#if WINDOWS7_0_OR_GREATER
         private static readonly Lazy<bool> isWine =
             new(() => Registry.LocalMachine.OpenSubKey(@"Software\Wine") != null);
+#else
+        private static readonly Lazy<bool> isWine = new(() => false);
+#endif
 
         /// <param name="appID">
         /// The numeric ID of the app to find. You can find the ID for a given app on
@@ -90,10 +105,11 @@ namespace SteamPath
             }
 
             var vdf = VdfConvert.Deserialize(File.ReadAllText(manifest));
-            var appDir =
-                Path.GetDirectoryName(manifest)
-                + @"\common\"
-                + vdf.Value["installdir"]!.Value<string>();
+            var appDir = Path.Join(
+                Path.GetDirectoryName(manifest),
+                "common",
+                vdf.Value["installdir"]!.Value<string>()
+            );
             return Directory.Exists(appDir) ? appDir : null;
         }
 
@@ -106,7 +122,7 @@ namespace SteamPath
         {
             var name = $@"appmanifest_{appID}.acf";
             return libraries
-                .Value.Select(library => $@"{library}\steamapps\{name}")
+                .Value.Select(library => Path.Join(library, "steamapps", name))
                 .Where(File.Exists)
                 .FirstOrDefault();
         }
