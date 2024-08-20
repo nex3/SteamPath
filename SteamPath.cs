@@ -1,4 +1,7 @@
-﻿using Gameloop.Vdf;
+﻿using System.ComponentModel;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
+using Gameloop.Vdf;
 using Gameloop.Vdf.Linq;
 using Microsoft.Win32;
 
@@ -12,20 +15,39 @@ namespace SteamPath
         private static readonly Lazy<List<string>> libraries =
             new(() =>
             {
-                var steam =
-                    (string?)
-                        Registry.GetValue(
-                            @"HKEY_CURRENT_USER\Software\Valve\Steam",
-                            "SteamPath",
-                            null
-                        ) ?? throw new SteamPathException("Steam is not installed.");
+                var steam = (string?)
+                    Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null);
+
+                if (steam == null)
+                {
+                    if (!isWine!.Value)
+                    {
+                        throw new SteamPathException("Steam is not installed.");
+                    }
+
+                    var username =
+                        Environment.GetEnvironmentVariable("USERNAME")
+                        ?? throw new SteamPathException(
+                            "USERNAME environment variable unavailable."
+                        );
+
+                    var linuxStyle = $"/home/{username}/.steam/root";
+                    var macOSStyle = $"/Users/{username}/.steam/root";
+                    steam =
+                        DirIfExists(ConvertWinePath(linuxStyle))
+                        ?? DirIfExists(ConvertWinePath(macOSStyle))
+                        ?? throw new SteamPathException(
+                            $"Steam is not installed in {linuxStyle} or {macOSStyle}."
+                        );
+                }
+
                 var libraries = new List<string>(new[] { steam });
 
                 VProperty vdf;
                 try
                 {
                     vdf = VdfConvert.Deserialize(
-                        File.ReadAllText($@"{steam}\SteamApps\libraryfolders.vdf")
+                        File.ReadAllText($@"{steam}\steamapps\libraryfolders.vdf")
                     );
                 }
                 catch (IOException e)
@@ -39,9 +61,14 @@ namespace SteamPath
                 libraries.AddRange(
                     vdf.Value.Cast<VProperty>()
                         .Select(child => child.Value["path"]!.Value<string>())
+                        .Select(ConvertWinePath)
                 );
                 return libraries;
             });
+
+        /// <summary>Whether the current process is running under Wine.</summary>
+        private static readonly Lazy<bool> isWine =
+            new(() => Registry.LocalMachine.OpenSubKey(@"Software\Wine") != null);
 
         /// <param name="appID">
         /// The numeric ID of the app to find. You can find the ID for a given app on
@@ -83,6 +110,45 @@ namespace SteamPath
                 .Where(File.Exists)
                 .FirstOrDefault();
         }
+
+        /// <summary>
+        /// If we're running under Wine, converts a Linux <paramref name="path"/> to Windows.
+        /// Otherwise, returns <paramref name="path"/> as-is.
+        /// </summary>
+        private static string ConvertWinePath(string path)
+        {
+            if (!isWine.Value)
+            {
+                return path;
+            }
+
+            try
+            {
+                var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "winepath.exe",
+                        Arguments = "--windows \"" + Regex.Replace(path, @"(\\+)$", @"$1$1") + "\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true,
+                    },
+                };
+                process.Start();
+
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                return output.Trim();
+            }
+            catch (Win32Exception e)
+            {
+                throw new SteamPathException("You're using Wine, but winepath.exe failed.", e);
+            }
+        }
+
+        /// <returns><paramref name="dir"/> if it exists, or null otherwise.</returns>
+        private static string? DirIfExists(string dir) => Directory.Exists(dir) ? dir : null;
 
         /// <summary>An exception thrown when discovering an application's path fails.</summary>
         public class SteamPathException : Exception

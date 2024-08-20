@@ -5,9 +5,7 @@ Steam. It exposes one function, `SteamPath.Find()`, which takes a Steam app ID (
 returns its path, or null if the app isn't installed.
 
 ```csharp
-using SteamPath;
-
-var path = SteamPath.Find(1245620);
+var path = SteamPath.SteamPath.Find("1245620");
 Console.WriteLine($"Elden Ring is installed in {path}");
 ```
 
