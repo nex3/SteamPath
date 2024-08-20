@@ -49,7 +49,9 @@ namespace SteamPath
                     ?? throw new SteamPathException("HOME environment variable unavailable.");
                 var steam =
                     DirIfExists($"{home}/.steam/root")
-                    ?? throw new SteamPathException($"Steam is not installed in {steam}.");
+                    ?? throw new SteamPathException(
+                        $"Steam is not installed in {home}/.steam/root."
+                    );
 #endif
 
                 var libraries = new List<string>(new[] { steam });
