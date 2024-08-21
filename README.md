@@ -22,7 +22,8 @@ This package supports multiple OS configurations:
 * **Unix under Proton**: Works as long as Steam is installed normally.
 
 * **Unix under WINE**: Works as long as Steam is installed in `/home/$USERNAME/.steam` or
-  `/Users/$USERNAME/.steam`. Unfortunately, WINE doesn't have access to the `$HOME` environment
-  variable, so this won't work if the user's home directory is in an unusual location.
+  `/Users/{username}/Library/Application Support/Steam`. Unfortunately, WINE doesn't have access to
+  the `$HOME` environment variable, so this won't work if the user's home directory is in an
+  unusual location.
 
 Note that Windows, Proton, and WINE support require using the windows7.0 build target.

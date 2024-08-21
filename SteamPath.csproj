@@ -4,7 +4,7 @@
     <TargetFrameworks>net6.0;net6.0-windows7.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Natalie Weizenbaum</Authors>
     <Description>Utility package for locating applications installed with Steam.</Description>
     <Copyright>Copyright 2024 Natalie Weizenbaum</Copyright>

@@ -35,7 +35,7 @@ namespace SteamPath
                         );
 
                     var linuxStyle = $"/home/{username}/.steam/root";
-                    var macOSStyle = $"/Users/{username}/.steam/root";
+                    var macOSStyle = $"/Users/{username}/Library/Application Support/Steam";
                     steam =
                         DirIfExists(ConvertWinePath(linuxStyle))
                         ?? DirIfExists(ConvertWinePath(macOSStyle))
