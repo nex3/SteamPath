@@ -20,6 +20,13 @@ namespace SteamPath
 #if WINDOWS7_0_OR_GREATER
                 var steam = (string?)
                     Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null);
+                if (steam != null && !Directory.Exists(steam))
+                {
+                    throw new SteamPathException(
+                        $"The registry says Steam is installed at ${steam}, but that directory "
+                            + "doesn't exist."
+                    );
+                }
 
                 if (steam == null)
                 {
@@ -66,7 +73,7 @@ namespace SteamPath
                 catch (IOException e)
                 {
                     throw new SteamPathException(
-                        "Steam installation doesn't contain libraryfolders.vdf.",
+                        $"Steam installation (${steam}) doesn't contain libraryfolders.vdf.",
                         e
                     );
                 }
@@ -166,7 +173,8 @@ namespace SteamPath
         }
 
         /// <returns><paramref name="dir"/> if it exists, or null otherwise.</returns>
-        private static string? DirIfExists(string dir) => Directory.Exists(dir) ? dir : null;
+        private static string? DirIfExists(string? dir) =>
+            dir != null && Directory.Exists(dir) ? dir : null;
 
         /// <summary>An exception thrown when discovering an application's path fails.</summary>
         public class SteamPathException : Exception
