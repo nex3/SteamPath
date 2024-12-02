@@ -14,82 +14,78 @@ namespace SteamPath
         /// <summary>
         /// A list of all library directories in which the user might have games installed.
         /// </summary>
-        private static readonly Lazy<List<string>> libraries =
-            new(() =>
-            {
+        private static readonly Lazy<List<string>> libraries = new(() =>
+        {
 #if WINDOWS7_0_OR_GREATER
-                var steam = (string?)
-                    Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null);
-                if (steam != null && !Directory.Exists(steam))
+            var steam = (string?)
+                Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null);
+            if (steam != null && !Directory.Exists(steam))
+            {
+                throw new SteamPathException(
+                    $"The registry says Steam is installed at ${steam}, but that directory "
+                        + "doesn't exist."
+                );
+            }
+
+            if (steam == null)
+            {
+                if (!isWine!.Value)
                 {
-                    throw new SteamPathException(
-                        $"The registry says Steam is installed at ${steam}, but that directory "
-                            + "doesn't exist."
-                    );
+                    throw new SteamPathException("Steam is not installed.");
                 }
 
-                if (steam == null)
-                {
-                    if (!isWine!.Value)
-                    {
-                        throw new SteamPathException("Steam is not installed.");
-                    }
+                var username =
+                    Environment.GetEnvironmentVariable("USERNAME")
+                    ?? throw new SteamPathException("USERNAME environment variable unavailable.");
 
-                    var username =
-                        Environment.GetEnvironmentVariable("USERNAME")
-                        ?? throw new SteamPathException(
-                            "USERNAME environment variable unavailable."
-                        );
-
-                    var linuxStyle = $"/home/{username}/.steam/root";
-                    var macOSStyle = $"/Users/{username}/Library/Application Support/Steam";
-                    steam =
-                        DirIfExists(ConvertWinePath(linuxStyle))
-                        ?? DirIfExists(ConvertWinePath(macOSStyle))
-                        ?? throw new SteamPathException(
-                            $"Steam is not installed in {linuxStyle} or {macOSStyle}."
-                        );
-                }
-#else
-                var home =
-                    Environment.GetEnvironmentVariable("HOME")
-                    ?? throw new SteamPathException("HOME environment variable unavailable.");
-                var steam =
-                    DirIfExists($"{home}/.steam/root")
+                var linuxStyle = $"/home/{username}/.steam/root";
+                var macOSStyle = $"/Users/{username}/Library/Application Support/Steam";
+                steam =
+                    DirIfExists(ConvertWinePath(linuxStyle))
+                    ?? DirIfExists(ConvertWinePath(macOSStyle))
                     ?? throw new SteamPathException(
-                        $"Steam is not installed in {home}/.steam/root."
+                        $"Steam is not installed in {linuxStyle} or {macOSStyle}."
                     );
+            }
+#else
+            var home =
+                Environment.GetEnvironmentVariable("HOME")
+                ?? throw new SteamPathException("HOME environment variable unavailable.");
+            var steam =
+                DirIfExists($"{home}/.steam/root")
+                ?? throw new SteamPathException($"Steam is not installed in {home}/.steam/root.");
 #endif
 
-                var libraries = new List<string>(new[] { steam });
+            var libraries = new List<string>(new[] { steam });
 
-                VProperty vdf;
-                try
-                {
-                    vdf = VdfConvert.Deserialize(
-                        File.ReadAllText(Path.Join(steam, "steamapps", "libraryfolders.vdf"))
-                    );
-                }
-                catch (IOException e)
-                {
-                    throw new SteamPathException(
-                        $"Steam installation (${steam}) doesn't contain libraryfolders.vdf.",
-                        e
-                    );
-                }
-
-                libraries.AddRange(
-                    vdf.Value.Cast<VProperty>()
-                        .Select(child => child.Value["path"]!.Value<string>())
-                        .Select(ConvertWinePath)
+            VProperty vdf;
+            try
+            {
+                vdf = VdfConvert.Deserialize(
+                    File.ReadAllText(Path.Join(steam, "steamapps", "libraryfolders.vdf"))
                 );
-                return libraries;
-            });
+            }
+            catch (IOException e)
+            {
+                throw new SteamPathException(
+                    $"Steam installation (${steam}) doesn't contain libraryfolders.vdf.",
+                    e
+                );
+            }
+
+            libraries.AddRange(
+                vdf.Value.Cast<VProperty>()
+                    .Select(child => child.Value["path"]!.Value<string>())
+                    .Select(ConvertWinePath)
+            );
+            return libraries;
+        });
 
         /// <summary>Whether the current process is running under Wine.</summary>
 #if WINDOWS7_0_OR_GREATER
-        private static readonly Lazy<bool> isWine =
-            new(() => Registry.LocalMachine.OpenSubKey(@"Software\Wine") != null);
+        private static readonly Lazy<bool> isWine = new(
+            () => Registry.LocalMachine.OpenSubKey(@"Software\Wine") != null
+        );
 #else
         private static readonly Lazy<bool> isWine = new(() => false);
 #endif
