@@ -83,8 +83,8 @@ namespace SteamPath
 
         /// <summary>Whether the current process is running under Wine.</summary>
 #if WINDOWS7_0_OR_GREATER
-        private static readonly Lazy<bool> isWine = new(
-            () => Registry.LocalMachine.OpenSubKey(@"Software\Wine") != null
+        private static readonly Lazy<bool> isWine = new(() =>
+            Registry.LocalMachine.OpenSubKey(@"Software\Wine") != null
         );
 #else
         private static readonly Lazy<bool> isWine = new(() => false);
